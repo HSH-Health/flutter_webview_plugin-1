@@ -10,6 +10,7 @@ static NSString *const CHANNEL_NAME = @"flutter_webview_plugin";
     NSString* _invalidUrlRegex;
     NSMutableSet* _javaScriptChannelNames;
     NSNumber*  _ignoreSSLErrors;
+    NSArray *_cookieList;
 }
 @end
 
@@ -87,6 +88,9 @@ static NSString *const CHANNEL_NAME = @"flutter_webview_plugin";
 - (void)initWebview:(FlutterMethodCall*)call withResult:(FlutterResult)result {
     NSNumber *clearCache = call.arguments[@"clearCache"];
     NSNumber *clearCookies = call.arguments[@"clearCookies"];
+    NSString *url = call.arguments[@"url"];
+    NSArray *cookies = call.arguments[@"cookieList"];
+    _cookieList = cookies;
     NSNumber *hidden = call.arguments[@"hidden"];
     NSDictionary *rect = call.arguments[@"rect"];
     _enableAppScheme = call.arguments[@"enableAppScheme"];
@@ -132,6 +136,26 @@ static NSString *const CHANNEL_NAME = @"flutter_webview_plugin";
     } else {
         rc = self.viewController.view.bounds;
     }
+
+    /// add cookieList
+    //应用于 ajax 请求的 cookie 设置
+    // WKUserContentController *userContentController = WKUserContentController.new;
+    // 应用于 request 的 cookie 设置
+    NSMutableURLRequest *request = [[NSMutableURLRequest alloc] initWithURL:[NSURL URLWithString: url]];
+    NSDictionary *headFields = request.allHTTPHeaderFields;
+
+    [cookies enumerateObjectsUsingBlock:^(id  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        NSDictionary *dic = obj;
+        NSString *cookieSource = [NSString stringWithFormat:@"document.cookie = '%@=%@;path=/';",dic[@"k"], dic[@"v"]];
+        WKUserScript *cookieScript = [[WKUserScript alloc] initWithSource:cookieSource injectionTime:WKUserScriptInjectionTimeAtDocumentStart forMainFrameOnly:NO];
+        [userContentController addUserScript:cookieScript];
+
+        NSString *cookie = headFields[dic[@"k"]];
+        if (cookie == nil) {
+            [request addValue:[NSString stringWithFormat:@"%@=%@",dic[@"k"] , dic[@"v"]] forHTTPHeaderField:@"Cookie"];
+        }
+    }];
+    /// add cookieList
 
     WKWebViewConfiguration* configuration = [[WKWebViewConfiguration alloc] init];
     configuration.userContentController = userContentController;
@@ -211,6 +235,17 @@ static NSString *const CHANNEL_NAME = @"flutter_webview_plugin";
                 }
             } else {
                 NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:url]];
+
+                /// cookieList 添加
+                NSDictionary *headFields = request.allHTTPHeaderFields;
+                [_cookieList enumerateObjectsUsingBlock:^(id  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+                    NSDictionary *dic = obj;
+                    NSString *cookie = headFields[dic[@"k"]];
+                    if (cookie == nil) {
+                        [request addValue:[NSString stringWithFormat:@"%@=%@", dic[@"k"], dic[@"v"]] forHTTPHeaderField:@"Cookie"];
+                    }
+                }];
+                /// cookieList 添加
                 NSDictionary *headers = call.arguments[@"headers"];
 
                 if (headers != nil) {
@@ -273,11 +308,22 @@ static NSString *const CHANNEL_NAME = @"flutter_webview_plugin";
         if (headers != nil) {
             [request setAllHTTPHeaderFields:headers];
         }
-        
+        /// 添加 cookieList
+        [self setCookie:request];
+        /// 添加 cookieList
         [self.webview loadRequest:request];
     }
 }
-
+- (void)setCookie:(NSMutableURLRequest*)request {
+    NSDictionary *headFields = request.allHTTPHeaderFields;
+    [_cookieList enumerateObjectsUsingBlock:^(id  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        NSDictionary *dic = obj;
+        NSString *cookie = headFields[dic[@"k"]];
+        if (cookie == nil) {
+            [request addValue:[NSString stringWithFormat:@"%@=%@;path=/", dic[@"k"], dic[@"v"]] forHTTPHeaderField:@"Cookie"];
+        }
+    }];
+}
 - (void)cleanCookies:(FlutterResult)result {
     if(self.webview != nil) {
         [[NSURLSession sharedSession] resetWithCompletionHandler:^{
@@ -398,6 +444,15 @@ static NSString *const CHANNEL_NAME = @"flutter_webview_plugin";
         id data = @{@"url": navigationAction.request.URL.absoluteString};
         [channel invokeMethod:@"onUrlChanged" arguments:data];
     }
+
+    /// add cookieList
+    if (navigationAction.targetFrame == nil) {
+        NSURLRequest *request = navigationAction.request;
+        [self setCookie:request];
+        [webView loadRequest:request];
+        decisionHandler(WKNavigationActionPolicyAllow);
+    }
+    /// add cookieList
 
     if (_enableAppScheme ||
         ([webView.URL.scheme isEqualToString:@"http"] ||

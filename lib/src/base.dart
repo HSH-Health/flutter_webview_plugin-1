@@ -148,6 +148,9 @@ class FlutterWebviewPlugin {
     bool withJavascript,
     bool clearCache,
     bool clearCookies,
+    /// add cookieList
+    List<Map<String,String>> cookieList,
+    /// add cookieList
     bool mediaPlaybackRequiresUserGesture,
     bool hidden,
     bool enableAppScheme,
@@ -175,6 +178,11 @@ class FlutterWebviewPlugin {
       'clearCache': clearCache ?? false,
       'hidden': hidden ?? false,
       'clearCookies': clearCookies ?? false,
+      
+      /// add cookieList
+      'cookieList': cookieList ?? [],
+      /// add cookieList
+
       'mediaPlaybackRequiresUserGesture': mediaPlaybackRequiresUserGesture ?? true,
       'enableAppScheme': enableAppScheme ?? true,
       'userAgent': userAgent,

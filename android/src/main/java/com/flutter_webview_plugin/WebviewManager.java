@@ -127,6 +127,10 @@ class WebviewManager {
     Context context;
     private boolean ignoreSSLErrors = false;
 
+    /// add cookieList
+    List<Map<String, String>> mCookieList;
+    /// add cookieList
+
     WebviewManager(final Activity activity, final Context context, final List<String> channelNames) {
         this.webView = new ObservableWebView(activity);
         this.activity = activity;
@@ -364,6 +368,11 @@ class WebviewManager {
             boolean clearCache,
             boolean hidden,
             boolean clearCookies,
+
+            /// add cookieList
+            List<Map<String, String>> cookieList,
+            /// add cookieList
+
             boolean mediaPlaybackRequiresUserGesture,
             String userAgent,
             String url,
@@ -440,6 +449,12 @@ class WebviewManager {
             webView.setVerticalScrollBarEnabled(false);
         }
 
+        /// add cookieList
+        this.mCookieList = cookieList;
+        setCookie(url);
+        /// add cookieList
+        
+        this.mCookieList = cookieList;
         if (headers != null) {
             webView.loadUrl(url, headers);
         } else {
@@ -447,6 +462,24 @@ class WebviewManager {
         }
     }
 
+    void  setCookie(String url) {
+        CookieManager cookieManager = CookieManager.getInstance();
+        cookieManager.setAcceptCookie(true);
+        cookieManager.removeAllCookie();
+        cookieManager.removeSessionCookie();//移除
+
+        Uri uri = Uri.parse(url);
+        String domain = uri.getHost();
+
+        for (int i = 0; i < this.mCookieList.size(); i++) {
+            Map<String, String> map = this.mCookieList.get(i);
+            cookieManager.setCookie(domain, map.get("k") + '=' + map.get("v"));
+        }
+        //cookies是在HttpClient中获得的cookie
+
+        cookieManager.flush();
+    }
+    
     void reloadUrl(String url) {
         webView.loadUrl(url);
     }

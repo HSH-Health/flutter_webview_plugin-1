@@ -17,6 +17,9 @@ class WebviewScaffold extends StatefulWidget {
     this.withJavascript,
     this.clearCache,
     this.clearCookies,
+    /// cookieList
+    this.cookieList,
+    /// cookieList
     this.mediaPlaybackRequiresUserGesture = true,
     this.enableAppScheme,
     this.userAgent,
@@ -50,6 +53,11 @@ class WebviewScaffold extends StatefulWidget {
   final bool withJavascript;
   final bool clearCache;
   final bool clearCookies;
+
+  /// add cookieList
+  final List<Map<String,String>> cookieList;
+  /// add cookieList
+  
   final bool mediaPlaybackRequiresUserGesture;
   final bool enableAppScheme;
   final String userAgent;
@@ -160,6 +168,11 @@ class _WebviewScaffoldState extends State<WebviewScaffold> {
               withJavascript: widget.withJavascript,
               clearCache: widget.clearCache,
               clearCookies: widget.clearCookies,
+
+              /// add cookieList
+              cookieList: widget.cookieList,
+              /// add cookieList
+
               mediaPlaybackRequiresUserGesture: widget.mediaPlaybackRequiresUserGesture,
               hidden: widget.hidden,
               enableAppScheme: widget.enableAppScheme,
